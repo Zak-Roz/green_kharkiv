@@ -13,6 +13,8 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/linecons_icons.dart';
 import 'package:icofont_flutter/icofont_flutter.dart';
 import 'package:community_material_icon/community_material_icon.dart';
+import 'package:green_kharkiv/register/entity/detail_space.dart';
+import 'package:green_kharkiv/register/entity/detail_street.dart';
 
 class Maps extends StatefulWidget {
   const Maps({Key? key}) : super(key: key);
@@ -37,8 +39,10 @@ class FullMapState extends State<Maps> {
   var mapboxStyle = MapboxStyles.MAPBOX_STREETS;
   late Widget listMapbox;
   late DioCacheManager _dioCacheManager;
+  late dynamic spaceFull;
   late dynamic space;
   late dynamic streetFurniture;
+  late dynamic streetFurnitureFull;
   var spaceIds = { "Germany" : "Berlin" };
   var streetFurnitureIds = { "Germany" : "Berlin" };
 
@@ -70,12 +74,14 @@ class FullMapState extends State<Maps> {
 
   getJsonListItem() async {
     _dioCacheManager = DioCacheManager(CacheConfig());
-    Options _cacheOptions = buildCacheOptions(Duration(hours: 1), forceRefresh: true);
+    Options _cacheOptions = buildCacheOptions(Duration(hours: 12), forceRefresh: true);
     Dio _dio = Dio();
     _dio.interceptors.add(_dioCacheManager.interceptor);
     const String apiUrlPub = EnvironmentConfig.HOST_PUB;
-    final urlSpace = '$apiUrlPub/api-user/vs.crm.data.api?path=eco_fund.ef_green_space&sql=app';
-    final urlStreetFurniture = '$apiUrlPub/api-user/vs.crm.data.api?path=eco_fund.ef_street_furniture&sql=app';
+    final urlSpace = '$apiUrlPub/api-user/vs.crm.data.api?path=eco_fund.ef_green_space&limit=100';
+    // TODO
+    final urlRecreationalZone = '$apiUrlPub/api-user/vs.crm.data.api?path=eco_fund.ef_recreational_zone&limit=100';
+    final urlStreetFurniture = '$apiUrlPub/api-user/vs.crm.data.api?path=eco_fund.ef_street_furniture&limit=100';
     final responseSpace = await _dio.get(
         urlSpace,
         options: _cacheOptions,
@@ -85,14 +91,16 @@ class FullMapState extends State<Maps> {
         options: _cacheOptions,
     );
     setState(() {
-      space = List<Map<String, dynamic>>.from(responseSpace.data);
-      streetFurniture = List<Map<String, dynamic>>.from(responseStreetFurniture.data);
+      spaceFull = Map<String, dynamic>.from(responseSpace.data);
+      space = List<Map<String, dynamic>>.from(spaceFull["rows"]);
+      streetFurnitureFull = Map<String, dynamic>.from(responseStreetFurniture.data);
+      streetFurniture = List<Map<String, dynamic>>.from(streetFurnitureFull["rows"]);
       spaceIds.clear();
       streetFurnitureIds.clear();
       var i = 0;
       for(var item in space) {
-        print('111111111111111111111111111111{"${i}": "${item["efgs_id"]}"}');
-        spaceIds.addAll({"${i++}": "${item["efgs_id"]}"});
+        print('111111111111111111111111111111{"${i}": "${item["id"]}"}');
+        spaceIds.addAll({"${i++}": "${item["id"]}"});
         markers.add(
             SymbolOptions(
               geometry: LatLng(item["geom"]["coordinates"][1], item["geom"]["coordinates"][0]),
@@ -102,8 +110,8 @@ class FullMapState extends State<Maps> {
         );
       }
       for(var item in streetFurniture) {
-        print('2222222222222222222222222222222222{"${i}": "${item["efsf_id"]}"}');
-        streetFurnitureIds.addAll({"${i++}": "${item["efsf_id"]}"});
+        print('2222222222222222222222222222222222{"${i}": "${item["id"]}"}');
+        streetFurnitureIds.addAll({"${i++}": "${item["id"]}"});
         markers.add(
             SymbolOptions(
               geometry: LatLng(item["geom"]["coordinates"][1], item["geom"]["coordinates"][0]),
@@ -113,15 +121,6 @@ class FullMapState extends State<Maps> {
         );
       }
     });
-    // final scaffold = ScaffoldMessenger.of(context);
-    // scaffold.showSnackBar(
-    //   SnackBar(
-    //     content: Text('${space[3]["geom"]["coordinates"][0]} =!!!= ${streetFurniture[1]["efsf_name"]}'),
-    //     duration: Duration(seconds: 1),
-    //     // action: SnackBarAction(label: 'UNDO', onPressed: scaffold.hideCurrentSnackBar),
-    //   ),
-    // );
-    // print('${space[3]["geom"]["coordinates"][0]} =!!!= ${streetFurniture[1]["efsf_name"]}');
     mapController.addSymbols(markers);
     mapController.onSymbolTapped.add(onSymbolTapped);
   }
@@ -131,34 +130,39 @@ class FullMapState extends State<Maps> {
       LatLng latLng = await mapController.getSymbolLatLng(symbol);
       print("spaceIds $spaceIds");
       print("streetFurnitureIds $streetFurnitureIds");
-      for (var item in space) {
-        print("spacespacespacespace -> ${item["efgs_id"]}, ${spaceIds[symbol.id]}");
-        if (item["efgs_id"] == spaceIds[symbol.id]) {
-          final scaffold = ScaffoldMessenger.of(context);
-          scaffold.showSnackBar(
-            SnackBar(
-              content: Text(
-                  '${symbol.id} -> ${item["efgs_id"]} -> ${item["efgs_name"]}'),
-              duration: Duration(seconds: 1),
-              // action: SnackBarAction(label: 'UNDO', onPressed: scaffold.hideCurrentSnackBar),
-            ),
-          );
-          break;
-        }
+      dynamic item = space.where((el) => el["id"] == spaceIds[symbol.id]).toList();
+      if (item.length != 0) {
+        item = item[0];
+        final scaffold = ScaffoldMessenger.of(context);
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text('${item["efgs_name"]} (${latLng.latitude}, ${latLng.longitude})'),
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(label: 'OPEN', onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DetailSpace(data: spaceFull, id: spaceIds[symbol.id])),
+            )),
+          ),
+        );
       }
-      for (var item in streetFurniture) {
-        print("streetFurniturestreetFurniture -> ${item["efsf_id"]}, ${streetFurnitureIds[symbol.id]}");
-        if (item["efsf_id"] == streetFurnitureIds[symbol.id]) {
-          final scaffold = ScaffoldMessenger.of(context);
-          scaffold.showSnackBar(
-            SnackBar(
-              content: Text('${symbol.id} -> ${item["efsf_id"]} -> ${item["efsf_name"]}'),
-              duration: Duration(seconds: 1),
-              // action: SnackBarAction(label: 'UNDO', onPressed: scaffold.hideCurrentSnackBar),
-            ),
-          );
-          break;
-        }
+      dynamic items = streetFurniture.where((el) => el["id"] == streetFurnitureIds[symbol.id]).toList();
+      if (items.length != 0) {
+        items = items[0];
+        final scaffold = ScaffoldMessenger.of(context);
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text('${items["efsf_name"]} (${latLng.latitude}, ${latLng.longitude})'),
+            duration: Duration(seconds: 2),
+            action: SnackBarAction(label: 'OPEN', onPressed: () =>
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) =>
+                      DetailFurniture(data: streetFurnitureFull,
+                          id: streetFurnitureIds[symbol.id])),
+                )),
+            // action: SnackBarAction(label: 'UNDO', onPressed: scaffold.hideCurrentSnackBar),
+          ),
+        );
       }
     } catch(err) {
       print("CATCH ID -> ${symbol.id}");

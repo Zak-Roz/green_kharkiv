@@ -6,6 +6,7 @@ import 'package:green_kharkiv/screens/map/map_screen.dart';
 import 'package:green_kharkiv/register/list_screen.dart';
 import 'package:green_kharkiv/constants.dart';
 import 'package:green_kharkiv/screens/home/profile.dart';
+import 'package:green_kharkiv/screens/home/ScanQrPage.dart';
 
 import 'package:green_kharkiv/main-config.dart';
 
@@ -44,6 +45,12 @@ class _HomeScreen extends State<MyHomePage> {
       home: Scaffold(
         appBar: buildAppBar(), //AppBar(title: Text(EnvironmentConfig.APP_NAME)),
         body: screens[_selectedIndex],
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton: new FloatingActionButton(
+            heroTag: null,
+            child: Icon(Icons.qr_code_outlined, size: 35),
+            onPressed: () => _pushScreen(context, ScanQrPage())
+        ),
         bottomNavigationBar: buildBottomNavigationBar(),
       ),
     );

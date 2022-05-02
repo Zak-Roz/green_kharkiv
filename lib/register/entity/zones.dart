@@ -8,7 +8,7 @@ class Zones extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Реакційні зони (${titles.length})'),
+        title: Text('Зони відпочинку (${titles.length})'),
         elevation: 0,
         actions: <Widget>[
           IconButton(
